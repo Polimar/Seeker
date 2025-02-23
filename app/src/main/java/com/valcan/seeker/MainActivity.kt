@@ -24,6 +24,11 @@ import com.valcan.seeker.data.model.Utente
 import com.valcan.seeker.data.model.Vestito
 import com.valcan.seeker.ui.navigation.*
 import com.valcan.seeker.ui.screens.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.lifecycleScope
+import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
@@ -52,75 +57,162 @@ class MainActivity : ComponentActivity() {
                 var isFirstAccess by remember { mutableStateOf(true) }
                 var showGestioneUtenti by remember { mutableStateOf(false) }
                 var showAddUser by remember { mutableStateOf(false) }
+                var armadiState by remember { mutableStateOf<List<Armadio>>(emptyList()) }
+                var utentiState by remember { mutableStateOf<List<Utente>>(emptyList()) }
+                var selectedArmadioId by remember { mutableStateOf<Long?>(null) }
 
-                // Verifica se ci sono utenti nel database
-                LaunchedEffect(Unit) {
-                    val users = utenteDao.getAll()
-                    isFirstAccess = users.isEmpty()
-                    if (!isFirstAccess) {
-                        currentUser = users.firstOrNull()
+                val coroutineScope = rememberCoroutineScope()
+
+                // Funzione per aggiornare gli armadi
+                suspend fun updateArmadi() {
+                    withContext(Dispatchers.IO) {
+                        currentUser?.let { user ->
+                            armadiState = armadioDao.getArmadiWithVestitiByUtenteId(user.id)
+                        }
                     }
                 }
 
-                if (isFirstAccess) {
-                    OnboardingScreen { nome, dataNascita ->
-                        val utente = Utente(
-                            nome = nome,
-                            dataNascita = dataNascita,
-                            foto = null
-                        )
-                        val id = utenteDao.insert(utente)
-                        currentUser = utenteDao.getById(id)
-                        isFirstAccess = false
+                // Funzione per aggiornare gli utenti
+                suspend fun updateUtenti() {
+                    withContext(Dispatchers.IO) {
+                        utentiState = utenteDao.getAll()
                     }
-                } else if (showAddUser) {
-                    OnboardingScreen { nome, dataNascita ->
-                        val utente = Utente(
-                            nome = nome,
-                            dataNascita = dataNascita,
-                            foto = null
-                        )
-                        utenteDao.insert(utente)
-                        showAddUser = false
-                    }
-                } else if (showGestioneUtenti) {
-                    GestioneUtentiScreen(
-                        utenti = utenteDao.getAll(),
-                        onAddUser = { showAddUser = true },
-                        onDeleteUser = { utente ->
-                            utenteDao.delete(utente)
-                        },
-                        onBack = { showGestioneUtenti = false }
-                    )
-                } else {
-                    Scaffold(
-                        bottomBar = {
-                            BottomNavigation(
-                                currentRoute = currentRoute,
-                                onNavigate = { item ->
-                                    currentRoute = item::class.simpleName ?: "Home"
-                                }
-                            )
+                }
+
+                // Effetto per caricare i dati iniziali
+                LaunchedEffect(Unit) {
+                    withContext(Dispatchers.IO) {
+                        val users = utenteDao.getAll()
+                        isFirstAccess = users.isEmpty()
+                        if (!isFirstAccess) {
+                            currentUser = users.firstOrNull()
+                            updateArmadi()
                         }
-                    ) { paddingValues ->
-                        Box(modifier = Modifier.padding(paddingValues)) {
-                            when (currentRoute) {
-                                "Home" -> HomeScreen(
-                                    nomeUtente = currentUser?.nome ?: "",
-                                    numeroVestiti = currentUser?.let { 
-                                        vestitoDao.getByUtenteId(it.id).size 
-                                    } ?: 0,
-                                    numeroScarpe = currentUser?.let { 
-                                        scarpaDao.getByUtenteId(it.id).size 
-                                    } ?: 0
+                    }
+                }
+
+                // Effetto per aggiornare gli armadi quando cambia l'utente
+                LaunchedEffect(currentUser) {
+                    updateArmadi()
+                }
+
+                when {
+                    isFirstAccess -> {
+                        OnboardingScreen { nome, dataNascita ->
+                            val utente = Utente(
+                                nome = nome,
+                                dataNascita = dataNascita,
+                                foto = null
+                            )
+                            val id = utenteDao.insert(utente)
+                            currentUser = utenteDao.getById(id)
+                            isFirstAccess = false
+                        }
+                    }
+                    showAddUser -> {
+                        OnboardingScreen { nome, dataNascita ->
+                            val utente = Utente(
+                                nome = nome,
+                                dataNascita = dataNascita,
+                                foto = null
+                            )
+                            utenteDao.insert(utente)
+                            showAddUser = false
+                            showGestioneUtenti = true  // Torna alla schermata di gestione utenti
+                        }
+                    }
+                    showGestioneUtenti -> {
+                        LaunchedEffect(Unit) {
+                            updateUtenti()
+                        }
+                        
+                        GestioneUtentiScreen(
+                            utenti = utentiState,
+                            currentUser = currentUser,
+                            onAddUser = { showAddUser = true },
+                            onDeleteUser = { utente ->
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    utenteDao.delete(utente)
+                                    if (currentUser?.id == utente.id) {
+                                        currentUser = utenteDao.getAll().firstOrNull()
+                                    }
+                                    updateUtenti()
+                                }
+                            },
+                            onSelectUser = { utente ->
+                                currentUser = utente
+                            },
+                            onBack = { showGestioneUtenti = false }
+                        )
+                    }
+                    else -> {
+                        Scaffold(
+                            bottomBar = {
+                                BottomNavigation(
+                                    currentRoute = currentRoute,
+                                    onNavigate = { item ->
+                                        currentRoute = item::class.simpleName ?: "Home"
+                                    }
                                 )
-                                "Vestiti" -> VestitiScreen()
-                                "Armadio" -> ArmadioScreen()
-                                "Cerca" -> CercaScreen()
-                                "Impostazioni" -> ImpostazioniScreen(
-                                    onGestioneUtentiClick = { showGestioneUtenti = true }
-                                )
-                                else -> Text("Schermata non trovata")
+                            }
+                        ) { paddingValues ->
+                            Box(modifier = Modifier.padding(paddingValues)) {
+                                when (currentRoute) {
+                                    "Home" -> HomeScreen(
+                                        nomeUtente = currentUser?.nome ?: "",
+                                        numeroVestiti = currentUser?.let { 
+                                            vestitoDao.getByUtenteId(it.id).size 
+                                        } ?: 0,
+                                        numeroScarpe = currentUser?.let { 
+                                            scarpaDao.getByUtenteId(it.id).size 
+                                        } ?: 0
+                                    )
+                                    "Vestiti" -> VestitiScreen(
+                                        vestiti = currentUser?.let { 
+                                            vestitoDao.getByUtenteId(it.id) 
+                                        } ?: emptyList(),
+                                        currentUser = currentUser?.nome ?: "",
+                                        onAddVestito = { /* TODO: Implementare l'aggiunta di un vestito */ }
+                                    )
+                                    "Armadio" -> ArmadioScreen(
+                                        armadi = armadiState,
+                                        currentUser = currentUser?.nome ?: "",
+                                        onAddArmadio = { armadio ->
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                armadioDao.insert(armadio)
+                                                updateArmadi()
+                                            }
+                                        },
+                                        onUpdateArmadio = { armadio ->
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                armadioDao.update(armadio)
+                                                updateArmadi()
+                                            }
+                                        },
+                                        onDeleteArmadio = { armadio ->
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                armadioDao.delete(armadio)
+                                                updateArmadi()
+                                            }
+                                        },
+                                        onAddVestito = { armadioId ->
+                                            // Naviga alla schermata di aggiunta vestiti
+                                            currentRoute = "Vestiti"
+                                            selectedArmadioId = armadioId
+                                        },
+                                        onAddScarpe = { armadioId ->
+                                            // Naviga alla schermata di aggiunta scarpe
+                                            currentRoute = "Scarpe"
+                                            selectedArmadioId = armadioId
+                                        },
+                                        onArmadioClick = { /* Non più necessario */ }
+                                    )
+                                    "Cerca" -> CercaScreen()
+                                    "Impostazioni" -> ImpostazioniScreen(
+                                        onGestioneUtentiClick = { showGestioneUtenti = true }
+                                    )
+                                    else -> Text("Schermata non trovata")
+                                }
                             }
                         }
                     }

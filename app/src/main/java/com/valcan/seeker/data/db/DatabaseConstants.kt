@@ -2,7 +2,7 @@ package com.valcan.seeker.data.db
 
 object DatabaseConstants {
     const val DATABASE_NAME = "seeker.db"
-    const val DATABASE_VERSION = 1
+    const val DATABASE_VERSION = 2
 
     // Tabella Armadi
     object Armadi {

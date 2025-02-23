@@ -12,14 +12,19 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 
 @Composable
 fun GestioneUtentiScreen(
     utenti: List<Utente>,
+    currentUser: Utente?,
     onAddUser: () -> Unit,
     onDeleteUser: (Utente) -> Unit,
+    onSelectUser: (Utente) -> Unit,
     onBack: () -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf<Utente?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,8 +64,16 @@ fun GestioneUtentiScreen(
             ) {
                 items(utenti) { utente ->
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectUser(utente) },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (currentUser?.id == utente.id) 
+                                MaterialTheme.colorScheme.primaryContainer 
+                            else 
+                                MaterialTheme.colorScheme.surface
+                        )
                     ) {
                         Row(
                             modifier = Modifier
@@ -78,8 +91,15 @@ fun GestioneUtentiScreen(
                                     text = "Data di nascita: ${utente.dataNascita}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
+                                if (currentUser?.id == utente.id) {
+                                    Text(
+                                        text = "Utente selezionato",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
-                            IconButton(onClick = { onDeleteUser(utente) }) {
+                            IconButton(onClick = { showDeleteDialog = utente }) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Elimina utente"
@@ -99,5 +119,29 @@ fun GestioneUtentiScreen(
         ) {
             Text("Aggiungi Nuovo Utente")
         }
+    }
+
+    // Dialog di conferma eliminazione
+    showDeleteDialog?.let { utente ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Conferma eliminazione") },
+            text = { Text("Sei sicuro di voler eliminare l'utente ${utente.nome}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteUser(utente)
+                        showDeleteDialog = null
+                    }
+                ) {
+                    Text("Conferma")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
     }
 } 

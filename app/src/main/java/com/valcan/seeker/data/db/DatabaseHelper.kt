@@ -76,11 +76,38 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // In caso di upgrade del database, eliminiamo e ricreiamo le tabelle
-        db.execSQL("DROP TABLE IF EXISTS ${Vestiti.TABLE_NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${Scarpe.TABLE_NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${Armadi.TABLE_NAME}")
-        db.execSQL("DROP TABLE IF EXISTS ${Utenti.TABLE_NAME}")
-        onCreate(db)
+        if (oldVersion < 2) {
+            // Creiamo una tabella temporanea senza la colonna UTENTE_ID
+            db.execSQL("""
+                CREATE TABLE armadi_temp (
+                    ${Armadi.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ${Armadi.COLUMN_NOME} TEXT NOT NULL,
+                    ${Armadi.COLUMN_POSIZIONE} TEXT NOT NULL,
+                    ${Armadi.COLUMN_NASCOSTO} INTEGER DEFAULT 0
+                )
+            """.trimIndent())
+
+            // Copiamo i dati dalla vecchia tabella alla nuova
+            db.execSQL("""
+                INSERT INTO armadi_temp (
+                    ${Armadi.COLUMN_ID},
+                    ${Armadi.COLUMN_NOME},
+                    ${Armadi.COLUMN_POSIZIONE},
+                    ${Armadi.COLUMN_NASCOSTO}
+                )
+                SELECT 
+                    ${Armadi.COLUMN_ID},
+                    ${Armadi.COLUMN_NOME},
+                    ${Armadi.COLUMN_POSIZIONE},
+                    ${Armadi.COLUMN_NASCOSTO}
+                FROM ${Armadi.TABLE_NAME}
+            """.trimIndent())
+
+            // Eliminiamo la vecchia tabella
+            db.execSQL("DROP TABLE ${Armadi.TABLE_NAME}")
+
+            // Rinominiamo la tabella temporanea
+            db.execSQL("ALTER TABLE armadi_temp RENAME TO ${Armadi.TABLE_NAME}")
+        }
     }
 } 
