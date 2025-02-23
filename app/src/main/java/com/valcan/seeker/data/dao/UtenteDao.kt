@@ -12,6 +12,7 @@ class UtenteDao(private val db: SQLiteDatabase) : BaseDao<Utente> {
         val values = ContentValues().apply {
             put(Utenti.COLUMN_NOME, item.nome)
             put(Utenti.COLUMN_DATA_NASCITA, item.dataNascita)
+            put(Utenti.COLUMN_SESSO, item.sesso)
             put(Utenti.COLUMN_FOTO, item.foto)
         }
         return db.insert(Utenti.TABLE_NAME, null, values)
@@ -21,6 +22,7 @@ class UtenteDao(private val db: SQLiteDatabase) : BaseDao<Utente> {
         val values = ContentValues().apply {
             put(Utenti.COLUMN_NOME, item.nome)
             put(Utenti.COLUMN_DATA_NASCITA, item.dataNascita)
+            put(Utenti.COLUMN_SESSO, item.sesso)
             put(Utenti.COLUMN_FOTO, item.foto)
         }
         return db.update(
@@ -78,6 +80,7 @@ class UtenteDao(private val db: SQLiteDatabase) : BaseDao<Utente> {
             id = cursor.getLong(cursor.getColumnIndexOrThrow(Utenti.COLUMN_ID)),
             nome = cursor.getString(cursor.getColumnIndexOrThrow(Utenti.COLUMN_NOME)),
             dataNascita = cursor.getString(cursor.getColumnIndexOrThrow(Utenti.COLUMN_DATA_NASCITA)),
+            sesso = cursor.getString(cursor.getColumnIndexOrThrow(Utenti.COLUMN_SESSO)),
             foto = cursor.getString(cursor.getColumnIndexOrThrow(Utenti.COLUMN_FOTO))
         )
     }

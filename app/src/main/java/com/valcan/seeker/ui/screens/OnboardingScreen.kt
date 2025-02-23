@@ -11,21 +11,30 @@ import java.util.*
 
 @Composable
 fun OnboardingScreen(
-    onComplete: (String, String) -> Unit
+    sesso: String,
+    onComplete: (nome: String, dataNascita: String) -> Unit
 ) {
     var nome by remember { mutableStateOf("") }
     var dataNascita by remember { mutableStateOf("") }
+    var hasError by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Benvenuto in Seeker!",
-            style = MaterialTheme.typography.headlineMedium
+            text = "Benvenuto!",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = if (sesso == "M") "Nuovo Utente" else "Nuova Utente",
+            style = MaterialTheme.typography.titleLarge
         )
         
         Spacer(modifier = Modifier.height(32.dp))

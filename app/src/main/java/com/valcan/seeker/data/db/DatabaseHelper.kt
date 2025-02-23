@@ -27,14 +27,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(
         """.trimIndent())
 
         // Creazione tabella Utenti
-        db.execSQL("""
-            CREATE TABLE ${Utenti.TABLE_NAME} (
-                ${Utenti.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                ${Utenti.COLUMN_NOME} TEXT NOT NULL,
-                ${Utenti.COLUMN_DATA_NASCITA} TEXT,
-                ${Utenti.COLUMN_FOTO} TEXT
-            )
-        """.trimIndent())
+        db.execSQL(CREATE_TABLE_UTENTI)
 
         // Creazione tabella Vestiti
         db.execSQL("""
@@ -77,37 +70,18 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
-            // Creiamo una tabella temporanea senza la colonna UTENTE_ID
-            db.execSQL("""
-                CREATE TABLE armadi_temp (
-                    ${Armadi.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ${Armadi.COLUMN_NOME} TEXT NOT NULL,
-                    ${Armadi.COLUMN_POSIZIONE} TEXT NOT NULL,
-                    ${Armadi.COLUMN_NASCOSTO} INTEGER DEFAULT 0
-                )
-            """.trimIndent())
-
-            // Copiamo i dati dalla vecchia tabella alla nuova
-            db.execSQL("""
-                INSERT INTO armadi_temp (
-                    ${Armadi.COLUMN_ID},
-                    ${Armadi.COLUMN_NOME},
-                    ${Armadi.COLUMN_POSIZIONE},
-                    ${Armadi.COLUMN_NASCOSTO}
-                )
-                SELECT 
-                    ${Armadi.COLUMN_ID},
-                    ${Armadi.COLUMN_NOME},
-                    ${Armadi.COLUMN_POSIZIONE},
-                    ${Armadi.COLUMN_NASCOSTO}
-                FROM ${Armadi.TABLE_NAME}
-            """.trimIndent())
-
-            // Eliminiamo la vecchia tabella
-            db.execSQL("DROP TABLE ${Armadi.TABLE_NAME}")
-
-            // Rinominiamo la tabella temporanea
-            db.execSQL("ALTER TABLE armadi_temp RENAME TO ${Armadi.TABLE_NAME}")
+            // Aggiungi la colonna sesso alla tabella utenti
+            db.execSQL("ALTER TABLE ${Utenti.TABLE_NAME} ADD COLUMN ${Utenti.COLUMN_SESSO} TEXT DEFAULT 'M' NOT NULL")
         }
     }
+
+    private val CREATE_TABLE_UTENTI = """
+        CREATE TABLE ${Utenti.TABLE_NAME} (
+            ${Utenti.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+            ${Utenti.COLUMN_NOME} TEXT NOT NULL,
+            ${Utenti.COLUMN_DATA_NASCITA} TEXT NOT NULL,
+            ${Utenti.COLUMN_SESSO} TEXT NOT NULL,
+            ${Utenti.COLUMN_FOTO} TEXT
+        )
+    """
 } 

@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.valcan.seeker.data.model.Utente
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +38,7 @@ fun GestioneUtentiScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Torna indietro"
                 )
             }
@@ -89,6 +89,10 @@ fun GestioneUtentiScreen(
                                 )
                                 Text(
                                     text = "Data di nascita: ${utente.dataNascita}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = if (utente.sesso == "M") "Maschio" else "Femmina",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 if (currentUser?.id == utente.id) {

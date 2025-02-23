@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
                 var armadiState by remember { mutableStateOf<List<Armadio>>(emptyList()) }
                 var utentiState by remember { mutableStateOf<List<Utente>>(emptyList()) }
                 var selectedArmadioId by remember { mutableStateOf<Long?>(null) }
+                var userSexToAdd by remember { mutableStateOf<String?>("M") }
 
                 val coroutineScope = rememberCoroutineScope()
 
@@ -86,6 +87,12 @@ class MainActivity : ComponentActivity() {
                         isFirstAccess = users.isEmpty()
                         if (!isFirstAccess) {
                             currentUser = users.firstOrNull()
+                            // Aggiorna gli utenti esistenti se necessario
+                            users.forEach { utente ->
+                                if (utente.sesso.isBlank()) {
+                                    utenteDao.update(utente.copy(sesso = "M"))
+                                }
+                            }
                             updateArmadi()
                         }
                     }
@@ -96,123 +103,158 @@ class MainActivity : ComponentActivity() {
                     updateArmadi()
                 }
 
-                when {
-                    isFirstAccess -> {
-                        OnboardingScreen { nome, dataNascita ->
+                if (isFirstAccess) {
+                    OnboardingScreen(
+                        sesso = userSexToAdd ?: "M",
+                        onComplete = { nome, dataNascita ->
                             val utente = Utente(
                                 nome = nome,
                                 dataNascita = dataNascita,
+                                sesso = userSexToAdd ?: "M",
                                 foto = null
                             )
                             val id = utenteDao.insert(utente)
                             currentUser = utenteDao.getById(id)
                             isFirstAccess = false
                         }
-                    }
-                    showAddUser -> {
-                        OnboardingScreen { nome, dataNascita ->
+                    )
+                } else if (showAddUser) {
+                    OnboardingScreen(
+                        sesso = userSexToAdd ?: "M",
+                        onComplete = { nome, dataNascita ->
                             val utente = Utente(
                                 nome = nome,
                                 dataNascita = dataNascita,
+                                sesso = userSexToAdd ?: "M",
                                 foto = null
                             )
                             utenteDao.insert(utente)
                             showAddUser = false
-                            showGestioneUtenti = true  // Torna alla schermata di gestione utenti
+                            showGestioneUtenti = true
                         }
+                    )
+                } else if (showGestioneUtenti) {
+                    LaunchedEffect(Unit) {
+                        updateUtenti()
                     }
-                    showGestioneUtenti -> {
-                        LaunchedEffect(Unit) {
-                            updateUtenti()
-                        }
-                        
-                        GestioneUtentiScreen(
-                            utenti = utentiState,
-                            currentUser = currentUser,
-                            onAddUser = { showAddUser = true },
-                            onDeleteUser = { utente ->
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    utenteDao.delete(utente)
-                                    if (currentUser?.id == utente.id) {
-                                        currentUser = utenteDao.getAll().firstOrNull()
-                                    }
-                                    updateUtenti()
+                    
+                    GestioneUtentiScreen(
+                        utenti = utentiState,
+                        currentUser = currentUser,
+                        onAddUser = { showAddUser = true },
+                        onDeleteUser = { utente ->
+                            coroutineScope.launch(Dispatchers.IO) {
+                                utenteDao.delete(utente)
+                                if (currentUser?.id == utente.id) {
+                                    currentUser = utenteDao.getAll().firstOrNull()
                                 }
-                            },
-                            onSelectUser = { utente ->
-                                currentUser = utente
-                            },
-                            onBack = { showGestioneUtenti = false }
-                        )
-                    }
-                    else -> {
-                        Scaffold(
-                            bottomBar = {
-                                BottomNavigation(
-                                    currentRoute = currentRoute,
-                                    onNavigate = { item ->
-                                        currentRoute = item::class.simpleName ?: "Home"
+                                updateUtenti()
+                            }
+                        },
+                        onSelectUser = { utente ->
+                            currentUser = utente
+                        },
+                        onBack = { showGestioneUtenti = false }
+                    )
+                } else {
+                    Scaffold(
+                        bottomBar = {
+                            BottomNavigation(
+                                currentRoute = currentRoute,
+                                onNavigate = { item ->
+                                    currentRoute = item::class.simpleName ?: "Home"
+                                }
+                            )
+                        }
+                    ) { paddingValues ->
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            when (currentRoute) {
+                                "Home" -> HomeScreen(
+                                    nomeUtente = currentUser?.nome ?: "",
+                                    numeroVestiti = currentUser?.let { 
+                                        vestitoDao.getByUtenteId(it.id).size 
+                                    } ?: 0,
+                                    numeroScarpe = currentUser?.let { 
+                                        scarpaDao.getByUtenteId(it.id).size 
+                                    } ?: 0
+                                )
+                                "AggiungiVestito" -> AggiungiVestitoScreen(
+                                    armadioId = selectedArmadioId ?: 0,
+                                    utenteId = currentUser?.id ?: 0,
+                                    onSalva = { vestito ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            vestitoDao.insert(vestito)
+                                            updateArmadi()
+                                            currentRoute = "Armadio"
+                                        }
+                                    },
+                                    onBack = { currentRoute = "Armadio" }
+                                )
+                                "AggiungiScarpe" -> AggiungiScarpeScreen(
+                                    armadioId = selectedArmadioId ?: 0,
+                                    utenteId = currentUser?.id ?: 0,
+                                    onSalva = { scarpa ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            scarpaDao.insert(scarpa)
+                                            updateArmadi()
+                                            currentRoute = "Armadio"
+                                        }
+                                    },
+                                    onBack = { currentRoute = "Armadio" }
+                                )
+                                "Vestiti" -> VestitiScreen(
+                                    vestiti = currentUser?.let { 
+                                        vestitoDao.getByUtenteId(it.id) 
+                                    } ?: emptyList(),
+                                    currentUser = currentUser?.nome ?: "",
+                                    onAddVestito = { /* TODO: Implementare l'aggiunta di un vestito */ }
+                                )
+                                "Armadio" -> ArmadioScreen(
+                                    armadi = armadiState,
+                                    currentUser = currentUser?.nome ?: "",
+                                    onAddArmadio = { armadio ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            armadioDao.insert(armadio)
+                                            updateArmadi()
+                                        }
+                                    },
+                                    onUpdateArmadio = { armadio ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            armadioDao.update(armadio)
+                                            updateArmadi()
+                                        }
+                                    },
+                                    onDeleteArmadio = { armadio ->
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            armadioDao.delete(armadio)
+                                            updateArmadi()
+                                        }
+                                    },
+                                    onAddVestito = { armadioId ->
+                                        selectedArmadioId = armadioId
+                                        currentRoute = "AggiungiVestito"
+                                    },
+                                    onAddScarpe = { armadioId ->
+                                        selectedArmadioId = armadioId
+                                        currentRoute = "AggiungiScarpe"
+                                    },
+                                    onArmadioClick = { /* Non più necessario */ }
+                                )
+                                "Cerca" -> CercaScreen()
+                                "Impostazioni" -> ImpostazioniScreen(
+                                    onAddUserMale = {
+                                        userSexToAdd = "M"
+                                        showAddUser = true
+                                    },
+                                    onAddUserFemale = {
+                                        userSexToAdd = "F"
+                                        showAddUser = true
+                                    },
+                                    onGestioneArmadi = {
+                                        currentRoute = "GestioneArmadi"
                                     }
                                 )
-                            }
-                        ) { paddingValues ->
-                            Box(modifier = Modifier.padding(paddingValues)) {
-                                when (currentRoute) {
-                                    "Home" -> HomeScreen(
-                                        nomeUtente = currentUser?.nome ?: "",
-                                        numeroVestiti = currentUser?.let { 
-                                            vestitoDao.getByUtenteId(it.id).size 
-                                        } ?: 0,
-                                        numeroScarpe = currentUser?.let { 
-                                            scarpaDao.getByUtenteId(it.id).size 
-                                        } ?: 0
-                                    )
-                                    "Vestiti" -> VestitiScreen(
-                                        vestiti = currentUser?.let { 
-                                            vestitoDao.getByUtenteId(it.id) 
-                                        } ?: emptyList(),
-                                        currentUser = currentUser?.nome ?: "",
-                                        onAddVestito = { /* TODO: Implementare l'aggiunta di un vestito */ }
-                                    )
-                                    "Armadio" -> ArmadioScreen(
-                                        armadi = armadiState,
-                                        currentUser = currentUser?.nome ?: "",
-                                        onAddArmadio = { armadio ->
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                armadioDao.insert(armadio)
-                                                updateArmadi()
-                                            }
-                                        },
-                                        onUpdateArmadio = { armadio ->
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                armadioDao.update(armadio)
-                                                updateArmadi()
-                                            }
-                                        },
-                                        onDeleteArmadio = { armadio ->
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                armadioDao.delete(armadio)
-                                                updateArmadi()
-                                            }
-                                        },
-                                        onAddVestito = { armadioId ->
-                                            // Naviga alla schermata di aggiunta vestiti
-                                            currentRoute = "Vestiti"
-                                            selectedArmadioId = armadioId
-                                        },
-                                        onAddScarpe = { armadioId ->
-                                            // Naviga alla schermata di aggiunta scarpe
-                                            currentRoute = "Scarpe"
-                                            selectedArmadioId = armadioId
-                                        },
-                                        onArmadioClick = { /* Non più necessario */ }
-                                    )
-                                    "Cerca" -> CercaScreen()
-                                    "Impostazioni" -> ImpostazioniScreen(
-                                        onGestioneUtentiClick = { showGestioneUtenti = true }
-                                    )
-                                    else -> Text("Schermata non trovata")
-                                }
+                                else -> Text("Schermata non trovata")
                             }
                         }
                     }

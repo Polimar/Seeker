@@ -51,6 +51,7 @@ object DatabaseConstants {
         const val COLUMN_ID = "id"
         const val COLUMN_NOME = "nome"
         const val COLUMN_DATA_NASCITA = "data_nascita"
+        const val COLUMN_SESSO = "sesso"
         const val COLUMN_FOTO = "foto"
     }
 } 
