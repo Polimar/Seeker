@@ -8,7 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ImpostazioniScreen() {
+fun ImpostazioniScreen(
+    onGestioneUtentiClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,6 +40,15 @@ fun ImpostazioniScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Gestisci Armadi")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = onGestioneUtentiClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Gestione Utenti")
         }
     }
 } 

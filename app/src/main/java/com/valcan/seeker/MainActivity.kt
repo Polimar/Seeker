@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -48,7 +49,18 @@ class MainActivity : ComponentActivity() {
             SeekerTheme {
                 var currentRoute by remember { mutableStateOf("Home") }
                 var currentUser by remember { mutableStateOf<Utente?>(null) }
-                var isFirstAccess by remember { mutableStateOf(utenteDao.getAll().isEmpty()) }
+                var isFirstAccess by remember { mutableStateOf(true) }
+                var showGestioneUtenti by remember { mutableStateOf(false) }
+                var showAddUser by remember { mutableStateOf(false) }
+
+                // Verifica se ci sono utenti nel database
+                LaunchedEffect(Unit) {
+                    val users = utenteDao.getAll()
+                    isFirstAccess = users.isEmpty()
+                    if (!isFirstAccess) {
+                        currentUser = users.firstOrNull()
+                    }
+                }
 
                 if (isFirstAccess) {
                     OnboardingScreen { nome, dataNascita ->
@@ -61,12 +73,26 @@ class MainActivity : ComponentActivity() {
                         currentUser = utenteDao.getById(id)
                         isFirstAccess = false
                     }
-                } else {
-                    if (currentUser == null) {
-                        // Carica il primo utente (per ora gestiamo un solo utente)
-                        currentUser = utenteDao.getAll().firstOrNull()
+                } else if (showAddUser) {
+                    OnboardingScreen { nome, dataNascita ->
+                        val utente = Utente(
+                            nome = nome,
+                            dataNascita = dataNascita,
+                            foto = null
+                        )
+                        utenteDao.insert(utente)
+                        showAddUser = false
                     }
-
+                } else if (showGestioneUtenti) {
+                    GestioneUtentiScreen(
+                        utenti = utenteDao.getAll(),
+                        onAddUser = { showAddUser = true },
+                        onDeleteUser = { utente ->
+                            utenteDao.delete(utente)
+                        },
+                        onBack = { showGestioneUtenti = false }
+                    )
+                } else {
                     Scaffold(
                         bottomBar = {
                             BottomNavigation(
@@ -77,21 +103,25 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     ) { paddingValues ->
-                        when (currentRoute) {
-                            "Home" -> HomeScreen(
-                                nomeUtente = currentUser?.nome ?: "",
-                                numeroVestiti = currentUser?.let { 
-                                    vestitoDao.getByUtenteId(it.id).size 
-                                } ?: 0,
-                                numeroScarpe = currentUser?.let { 
-                                    scarpaDao.getByUtenteId(it.id).size 
-                                } ?: 0
-                            )
-                            "Vestiti" -> VestitiScreen()
-                            "Armadio" -> ArmadioScreen()
-                            "Cerca" -> CercaScreen()
-                            "Impostazioni" -> ImpostazioniScreen()
-                            else -> Text("Schermata non trovata")
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            when (currentRoute) {
+                                "Home" -> HomeScreen(
+                                    nomeUtente = currentUser?.nome ?: "",
+                                    numeroVestiti = currentUser?.let { 
+                                        vestitoDao.getByUtenteId(it.id).size 
+                                    } ?: 0,
+                                    numeroScarpe = currentUser?.let { 
+                                        scarpaDao.getByUtenteId(it.id).size 
+                                    } ?: 0
+                                )
+                                "Vestiti" -> VestitiScreen()
+                                "Armadio" -> ArmadioScreen()
+                                "Cerca" -> CercaScreen()
+                                "Impostazioni" -> ImpostazioniScreen(
+                                    onGestioneUtentiClick = { showGestioneUtenti = true }
+                                )
+                                else -> Text("Schermata non trovata")
+                            }
                         }
                     }
                 }
