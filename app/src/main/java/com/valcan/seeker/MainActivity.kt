@@ -87,8 +87,11 @@ class MainActivity : ComponentActivity() {
                                     scarpaDao.getByUtenteId(it.id).size 
                                 } ?: 0
                             )
-                            // Altri schermi da implementare
-                            else -> Text("Schermata in costruzione")
+                            "Vestiti" -> VestitiScreen()
+                            "Armadio" -> ArmadioScreen()
+                            "Cerca" -> CercaScreen()
+                            "Impostazioni" -> ImpostazioniScreen()
+                            else -> Text("Schermata non trovata")
                         }
                     }
                 }
