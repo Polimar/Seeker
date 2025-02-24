@@ -16,15 +16,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(
 ) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Creazione tabella Armadi
         db.execSQL("""
             CREATE TABLE ${Armadi.TABLE_NAME} (
                 ${Armadi.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
                 ${Armadi.COLUMN_NOME} TEXT NOT NULL,
                 ${Armadi.COLUMN_POSIZIONE} TEXT NOT NULL,
-                ${Armadi.COLUMN_NASCOSTO} INTEGER DEFAULT 0
+                ${Armadi.COLUMN_CREATORE_ID} INTEGER NOT NULL,
+                FOREIGN KEY (${Armadi.COLUMN_CREATORE_ID}) 
+                REFERENCES ${Utenti.TABLE_NAME}(${Utenti.COLUMN_ID})
             )
-        """.trimIndent())
+        """)
 
         // Creazione tabella Utenti
         db.execSQL(CREATE_TABLE_UTENTI)

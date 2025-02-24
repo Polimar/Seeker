@@ -1,21 +1,27 @@
 package com.valcan.seeker.ui.screens
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.valcan.seeker.R
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun OnboardingScreen(
-    sesso: String,
-    onComplete: (nome: String, dataNascita: String) -> Unit
+    onComplete: (nome: String, dataNascita: String, sesso: String) -> Unit
 ) {
     var nome by remember { mutableStateOf("") }
     var dataNascita by remember { mutableStateOf("") }
+    var selectedSesso by remember { mutableStateOf<String?>(null) }
     var hasError by remember { mutableStateOf(false) }
 
     Column(
@@ -25,46 +31,87 @@ fun OnboardingScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Benvenuto!",
-            style = MaterialTheme.typography.headlineMedium,
+            text = "Benvenuto su SeeKer",
+            style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text(
-            text = if (sesso == "M") "Nuovo Utente" else "Nuova Utente",
-            style = MaterialTheme.typography.titleLarge
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
         OutlinedTextField(
             value = nome,
-            onValueChange = { nome = it },
+            onValueChange = { 
+                nome = it
+                hasError = false
+            },
             label = { Text("Nome") },
-            singleLine = true,
+            isError = hasError && nome.isBlank(),
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         OutlinedTextField(
             value = dataNascita,
-            onValueChange = { dataNascita = it },
-            label = { Text("Data di nascita (DD/MM/YYYY)") },
-            singleLine = true,
+            onValueChange = { 
+                dataNascita = it
+                hasError = false
+            },
+            label = { Text("Data di nascita (dd/mm/yyyy)") },
+            isError = hasError && dataNascita.isBlank(),
             modifier = Modifier.fillMaxWidth()
         )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Button(
-            onClick = { onComplete(nome, dataNascita) },
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = nome.isNotBlank() && isValidDate(dataNascita)
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text("Inizia")
+            Image(
+                painter = painterResource(id = R.drawable.usermale),
+                contentDescription = "Utente maschio",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clickable { selectedSesso = "M" }
+                    .border(
+                        width = 2.dp,
+                        color = if (selectedSesso == "M") 
+                            MaterialTheme.colorScheme.primary 
+                        else MaterialTheme.colorScheme.outline,
+                        shape = CircleShape
+                    )
+            )
+            
+            Image(
+                painter = painterResource(id = R.drawable.userfemale),
+                contentDescription = "Utente femmina",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clickable { selectedSesso = "F" }
+                    .border(
+                        width = 2.dp,
+                        color = if (selectedSesso == "F") 
+                            MaterialTheme.colorScheme.primary 
+                        else MaterialTheme.colorScheme.outline,
+                        shape = CircleShape
+                    )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = {
+                if (nome.isBlank() || dataNascita.isBlank() || selectedSesso == null) {
+                    hasError = true
+                } else {
+                    onComplete(nome, dataNascita, selectedSesso!!)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Continua")
         }
     }
 }

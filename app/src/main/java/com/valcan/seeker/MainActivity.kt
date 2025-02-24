@@ -55,216 +55,46 @@ class MainActivity : ComponentActivity() {
                 var currentRoute by remember { mutableStateOf("Home") }
                 var currentUser by remember { mutableStateOf<Utente?>(null) }
                 var isFirstAccess by remember { mutableStateOf(true) }
-                var showGestioneUtenti by remember { mutableStateOf(false) }
-                var showAddUser by remember { mutableStateOf(false) }
-                var armadiState by remember { mutableStateOf<List<Armadio>>(emptyList()) }
+                var showUserSelection by remember { mutableStateOf(false) }
                 var utentiState by remember { mutableStateOf<List<Utente>>(emptyList()) }
-                var selectedArmadioId by remember { mutableStateOf<Long?>(null) }
-                var userSexToAdd by remember { mutableStateOf<String?>("M") }
-
-                val coroutineScope = rememberCoroutineScope()
-
-                // Funzione per aggiornare gli armadi
-                suspend fun updateArmadi() {
-                    withContext(Dispatchers.IO) {
-                        armadiState = armadioDao.getAll()
-                    }
-                }
-
-                // Funzione per aggiornare gli utenti
-                suspend fun updateUtenti() {
-                    withContext(Dispatchers.IO) {
-                        utentiState = utenteDao.getAll()
-                    }
-                }
-
-                // Effetto per caricare i dati iniziali
+                
                 LaunchedEffect(Unit) {
                     withContext(Dispatchers.IO) {
                         val users = utenteDao.getAll()
                         isFirstAccess = users.isEmpty()
                         if (!isFirstAccess) {
-                            currentUser = users.firstOrNull()
-                            // Aggiorna gli utenti esistenti se necessario
-                            users.forEach { utente ->
-                                if (utente.sesso.isBlank()) {
-                                    utenteDao.update(utente.copy(sesso = "M"))
-                                }
-                            }
-                            updateArmadi()
+                            showUserSelection = true
+                            utentiState = users
                         }
                     }
                 }
 
-                // Effetto per aggiornare gli armadi quando cambia l'utente
-                LaunchedEffect(currentUser) {
-                    updateArmadi()
-                }
-
-                if (isFirstAccess) {
-                    OnboardingScreen(
-                        sesso = userSexToAdd ?: "M",
-                        onComplete = { nome, dataNascita ->
+                when {
+                    isFirstAccess -> {
+                        OnboardingScreen { nome, dataNascita, sesso ->
                             val utente = Utente(
                                 nome = nome,
                                 dataNascita = dataNascita,
-                                sesso = userSexToAdd ?: "M",
-                                foto = null
+                                sesso = sesso
                             )
-                            val id = utenteDao.insert(utente)
-                            currentUser = utenteDao.getById(id)
-                            isFirstAccess = false
-                        }
-                    )
-                } else if (showAddUser) {
-                    OnboardingScreen(
-                        sesso = userSexToAdd ?: "M",
-                        onComplete = { nome, dataNascita ->
-                            val utente = Utente(
-                                nome = nome,
-                                dataNascita = dataNascita,
-                                sesso = userSexToAdd ?: "M",
-                                foto = null
-                            )
-                            utenteDao.insert(utente)
-                            showAddUser = false
-                            showGestioneUtenti = true
-                        }
-                    )
-                } else if (showGestioneUtenti) {
-                    LaunchedEffect(Unit) {
-                        updateUtenti()
-                    }
-                    
-                    GestioneUtentiScreen(
-                        utenti = utentiState,
-                        currentUser = currentUser,
-                        onAddUser = { showAddUser = true },
-                        onDeleteUser = { utente ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                utenteDao.delete(utente)
-                                if (currentUser?.id == utente.id) {
-                                    currentUser = utenteDao.getAll().firstOrNull()
-                                }
-                                updateUtenti()
-                            }
-                        },
-                        onSelectUser = { utente ->
-                            currentUser = utente
-                        },
-                        onBack = { showGestioneUtenti = false }
-                    )
-                } else {
-                    Scaffold(
-                        bottomBar = {
-                            BottomNavigation(
-                                currentRoute = currentRoute,
-                                onNavigate = { item ->
-                                    currentRoute = item::class.simpleName ?: "Home"
-                                },
-                                sesso = currentUser?.sesso ?: "M"
-                            )
-                        }
-                    ) { paddingValues ->
-                        Box(modifier = Modifier.padding(paddingValues)) {
-                            when (currentRoute) {
-                                "Home" -> HomeScreen(
-                                    nomeUtente = currentUser?.nome ?: "",
-                                    numeroVestiti = currentUser?.let { 
-                                        vestitoDao.getByUtenteId(it.id).size 
-                                    } ?: 0,
-                                    numeroScarpe = currentUser?.let { 
-                                        scarpaDao.getByUtenteId(it.id).size 
-                                    } ?: 0,
-                                    sesso = currentUser?.sesso ?: "M"
-                                )
-                                "AggiungiVestito" -> AggiungiVestitoScreen(
-                                    armadioId = selectedArmadioId ?: 0,
-                                    utenteId = currentUser?.id ?: 0,
-                                    armadi = armadiState,
-                                    onSalva = { vestito ->
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            vestitoDao.insert(vestito)
-                                            updateArmadi()
-                                            currentRoute = "Armadio"
-                                        }
-                                    },
-                                    onBack = { currentRoute = "Armadio" }
-                                )
-                                "AggiungiScarpe" -> AggiungiScarpeScreen(
-                                    armadioId = selectedArmadioId ?: 0,
-                                    utenteId = currentUser?.id ?: 0,
-                                    onSalva = { scarpa ->
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            scarpaDao.insert(scarpa)
-                                            updateArmadi()
-                                            currentRoute = "Armadio"
-                                        }
-                                    },
-                                    onBack = { currentRoute = "Armadio" }
-                                )
-                                "Vestiti" -> VestitiScreen(
-                                    vestiti = currentUser?.let { 
-                                        vestitoDao.getByUtenteId(it.id) 
-                                    } ?: emptyList(),
-                                    currentUser = currentUser?.nome ?: "",
-                                    onAddVestito = { armadioId ->
-                                        selectedArmadioId = armadioId
-                                        currentRoute = "AggiungiVestito"
-                                    },
-                                    armadi = armadiState
-                                )
-                                "Armadio" -> ArmadioScreen(
-                                    armadi = armadiState,
-                                    currentUser = currentUser?.nome ?: "",
-                                    onAddArmadio = { armadio ->
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            armadioDao.insert(armadio)
-                                            updateArmadi()
-                                        }
-                                    },
-                                    onUpdateArmadio = { armadio ->
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            armadioDao.update(armadio)
-                                            updateArmadi()
-                                        }
-                                    },
-                                    onDeleteArmadio = { armadio ->
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            armadioDao.delete(armadio)
-                                            updateArmadi()
-                                        }
-                                    },
-                                    onAddVestito = { armadioId ->
-                                        selectedArmadioId = armadioId
-                                        currentRoute = "AggiungiVestito"
-                                    },
-                                    onAddScarpe = { armadioId ->
-                                        selectedArmadioId = armadioId
-                                        currentRoute = "AggiungiScarpe"
-                                    },
-                                    onArmadioClick = { /* Non più necessario */ }
-                                )
-                                "Cerca" -> CercaScreen()
-                                "Impostazioni" -> ImpostazioniScreen(
-                                    onAddUserMale = {
-                                        userSexToAdd = "M"
-                                        showAddUser = true
-                                    },
-                                    onAddUserFemale = {
-                                        userSexToAdd = "F"
-                                        showAddUser = true
-                                    },
-                                    onGestioneArmadi = {
-                                        currentRoute = "Armadio"
-                                    },
-                                    onGestioneUtenti = {
-                                        showGestioneUtenti = true
-                                    }
-                                )
-                                else -> Text("Schermata non trovata")
+                                val id = utenteDao.insert(utente)
+                                currentUser = utenteDao.getById(id)
+                                isFirstAccess = false
                             }
                         }
+                    }
+                    showUserSelection -> {
+                        UserSelectionScreen(
+                            utenti = utentiState,
+                            onUserSelected = { utente ->
+                                currentUser = utente
+                                showUserSelection = false
+                            }
+                        )
+                    }
+                    else -> {
+                        // Resto dell'app...
                     }
                 }
             }
