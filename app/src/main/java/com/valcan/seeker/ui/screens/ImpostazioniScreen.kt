@@ -17,7 +17,8 @@ import com.valcan.seeker.R
 fun ImpostazioniScreen(
     onAddUserMale: () -> Unit,
     onAddUserFemale: () -> Unit,
-    onGestioneArmadi: () -> Unit
+    onGestioneArmadi: () -> Unit,
+    onGestioneUtenti: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -39,6 +40,25 @@ fun ImpostazioniScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.weight(1f)
         ) {
+            // Gestione Utenti
+            item {
+                IconCard(
+                    iconResId = R.drawable.users,
+                    label = "Gestione Utenti",
+                    onClick = onGestioneUtenti
+                )
+            }
+            
+            // Gestione Armadi
+            item {
+                IconCard(
+                    iconResId = R.drawable.ic_wardrobe,
+                    label = "Gestione Armadi",
+                    onClick = onGestioneArmadi
+                )
+            }
+            
+            // Aggiungi Utente Maschio
             item {
                 IconCard(
                     iconResId = R.drawable.addusermale,
@@ -46,22 +66,14 @@ fun ImpostazioniScreen(
                     onClick = onAddUserMale
                 )
             }
+            
+            // Aggiungi Utente Femmina
             item {
                 IconCard(
                     iconResId = R.drawable.adduserfemale,
                     label = "Aggiungi Utente Femmina",
                     onClick = onAddUserFemale
                 )
-            }
-            items(2) { // Occupa due colonne
-                if (it == 0) { // Solo per il primo item
-                    IconCard(
-                        iconResId = R.drawable.ic_wardrobe,
-                        label = "Gestione Armadi",
-                        onClick = onGestioneArmadi,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
         }
     }

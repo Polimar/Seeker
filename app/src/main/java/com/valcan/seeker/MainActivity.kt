@@ -176,7 +176,8 @@ class MainActivity : ComponentActivity() {
                                     } ?: 0,
                                     numeroScarpe = currentUser?.let { 
                                         scarpaDao.getByUtenteId(it.id).size 
-                                    } ?: 0
+                                    } ?: 0,
+                                    sesso = currentUser?.sesso ?: "M"
                                 )
                                 "AggiungiVestito" -> AggiungiVestitoScreen(
                                     armadioId = selectedArmadioId ?: 0,
@@ -251,7 +252,10 @@ class MainActivity : ComponentActivity() {
                                         showAddUser = true
                                     },
                                     onGestioneArmadi = {
-                                        currentRoute = "GestioneArmadi"
+                                        currentRoute = "Armadio"
+                                    },
+                                    onGestioneUtenti = {
+                                        showGestioneUtenti = true
                                     }
                                 )
                                 else -> Text("Schermata non trovata")
