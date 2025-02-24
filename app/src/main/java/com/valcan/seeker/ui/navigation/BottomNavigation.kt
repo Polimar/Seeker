@@ -11,7 +11,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BottomNavigation(
     currentRoute: String,
-    onNavigate: (NavigationItem) -> Unit
+    onNavigate: (NavigationItem) -> Unit,
+    sesso: String = "M"
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -19,14 +20,14 @@ fun BottomNavigation(
         listOf(
             NavigationItem.Home,
             NavigationItem.Vestiti,
-            NavigationItem.Armadio,
+            NavigationItem.Scarpe,
             NavigationItem.Cerca,
             NavigationItem.Impostazioni
         ).forEach { item ->
             NavigationBarItem(
                 icon = { 
                     Image(
-                        painter = painterResource(id = item.icon),
+                        painter = painterResource(id = item.getIcon(sesso)),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp)
                     )

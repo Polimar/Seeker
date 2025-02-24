@@ -163,7 +163,8 @@ class MainActivity : ComponentActivity() {
                                 currentRoute = currentRoute,
                                 onNavigate = { item ->
                                     currentRoute = item::class.simpleName ?: "Home"
-                                }
+                                },
+                                sesso = currentUser?.sesso ?: "M"
                             )
                         }
                     ) { paddingValues ->
