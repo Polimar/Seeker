@@ -67,9 +67,7 @@ class MainActivity : ComponentActivity() {
                 // Funzione per aggiornare gli armadi
                 suspend fun updateArmadi() {
                     withContext(Dispatchers.IO) {
-                        currentUser?.let { user ->
-                            armadiState = armadioDao.getArmadiWithVestitiByUtenteId(user.id)
-                        }
+                        armadiState = armadioDao.getAll()
                     }
                 }
 
@@ -183,6 +181,7 @@ class MainActivity : ComponentActivity() {
                                 "AggiungiVestito" -> AggiungiVestitoScreen(
                                     armadioId = selectedArmadioId ?: 0,
                                     utenteId = currentUser?.id ?: 0,
+                                    armadi = armadiState,
                                     onSalva = { vestito ->
                                         coroutineScope.launch(Dispatchers.IO) {
                                             vestitoDao.insert(vestito)
@@ -209,7 +208,11 @@ class MainActivity : ComponentActivity() {
                                         vestitoDao.getByUtenteId(it.id) 
                                     } ?: emptyList(),
                                     currentUser = currentUser?.nome ?: "",
-                                    onAddVestito = { /* TODO: Implementare l'aggiunta di un vestito */ }
+                                    onAddVestito = { armadioId ->
+                                        selectedArmadioId = armadioId
+                                        currentRoute = "AggiungiVestito"
+                                    },
+                                    armadi = armadiState
                                 )
                                 "Armadio" -> ArmadioScreen(
                                     armadi = armadiState,

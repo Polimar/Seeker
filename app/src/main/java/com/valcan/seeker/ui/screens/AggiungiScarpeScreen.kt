@@ -143,7 +143,7 @@ fun AggiungiScarpeScreen(
                             armadioId = armadioId,
                             posizione = posizione,
                             utenteId = utenteId,
-                            dataInserimento = DateUtils.getCurrentDateTime()
+                            dataInserimento = DateUtils.getCurrentDate()
                         )
                     )
                 }

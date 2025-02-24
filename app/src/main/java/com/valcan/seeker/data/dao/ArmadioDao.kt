@@ -57,7 +57,6 @@ class ArmadioDao(private val db: SQLiteDatabase) : BaseDao<Armadio> {
     }
 
     override fun getAll(): List<Armadio> {
-        val armadi = mutableListOf<Armadio>()
         val cursor = db.query(
             Armadi.TABLE_NAME,
             null,
@@ -67,40 +66,15 @@ class ArmadioDao(private val db: SQLiteDatabase) : BaseDao<Armadio> {
             null,
             null
         )
-        cursor.use {
-            while (it.moveToNext()) {
-                armadi.add(cursorToArmadio(it))
-            }
-        }
-        return armadi
-    }
-
-    fun getArmadiWithVestitiByUtenteId(utenteId: Long): List<Armadio> {
-        val query = """
-            SELECT DISTINCT a.* 
-            FROM ${Armadi.TABLE_NAME} a
-            LEFT JOIN ${Vestiti.TABLE_NAME} v ON v.${Vestiti.COLUMN_ARMADIO_ID} = a.${Armadi.COLUMN_ID}
-            LEFT JOIN ${Scarpe.TABLE_NAME} s ON s.${Scarpe.COLUMN_ARMADIO_ID} = a.${Armadi.COLUMN_ID}
-            WHERE v.${Vestiti.COLUMN_UTENTE_ID} = ? 
-            OR s.${Scarpe.COLUMN_UTENTE_ID} = ?
-            OR NOT EXISTS (
-                SELECT 1 
-                FROM ${Vestiti.TABLE_NAME} v2 
-                WHERE v2.${Vestiti.COLUMN_ARMADIO_ID} = a.${Armadi.COLUMN_ID}
-                UNION
-                SELECT 1 
-                FROM ${Scarpe.TABLE_NAME} s2 
-                WHERE s2.${Scarpe.COLUMN_ARMADIO_ID} = a.${Armadi.COLUMN_ID}
-            )
-        """
+        
         val armadi = mutableListOf<Armadio>()
-        val cursor = db.rawQuery(query, arrayOf(utenteId.toString(), utenteId.toString()))
         
         cursor.use {
             while (it.moveToNext()) {
                 armadi.add(cursorToArmadio(it))
             }
         }
+        
         return armadi
     }
 

@@ -84,4 +84,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(
             ${Utenti.COLUMN_FOTO} TEXT
         )
     """
+
+    companion object {
+        private const val CREATE_TABLE_ARMADIO = """
+            CREATE TABLE ${Armadi.TABLE_NAME} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                descrizione TEXT,
+                creatore_id INTEGER,
+                FOREIGN KEY (creatore_id) REFERENCES ${Utenti.TABLE_NAME}(${Utenti.COLUMN_ID})
+            )
+        """
+    }
 } 
